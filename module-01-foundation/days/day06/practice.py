@@ -1,159 +1,119 @@
-import math
+from abc import ABC, abstractmethod
 
-# =========================================================
-# EXERCISE 1: Spot the SRP (Single Responsibility) Violation
-# =========================================================
-# Split a Report class (which had data, saving, and emailing) into 3 focused classes.
+# =====================================================================
+# 1. Spot the SRP Violation (Refactored)
+# =====================================================================
+# Old way: One class did everything.
+# New way: We split the responsibilities into focused classes.
 
 class Report:
-    """Class responsible ONLY for holding and building report data."""
-    def __init__(self, title, content):
-        self.title = title
+    def __init__(self, content):
         self.content = content
 
-    def get_formatted_report(self):
-        return f"=== {self.title} ===\n{self.content}"
-
-
 class ReportSaver:
-    """Class responsible ONLY for saving a report to disk."""
-    def save_to_file(self, report, filename):
-        print(f"[Saver] Saving report '{report.title}' to {filename}...")
+    def save(self, report):
+        print(f"Saving report content: '{report.content}' to database.")
+
+class ReportMailer:
+    def send(self, report, email):
+        print(f"Sending email containing: '{report.content}' to {email}.")
 
 
-class ReportEmailer:
-    """Class responsible ONLY for emailing a report."""
-    def email_report(self, report, recipient):
-        print(f"[Emailer] Sending report '{report.title}' to {recipient}...")
-
-
-# =========================================================
-# EXERCISE 2 & 4: Open/Closed Principle (OCP) & Factory Pattern
-# =========================================================
-# Refactored shapes to inherit from a base Shape class (OCP).
-# Created a ShapeFactory to handle instantiation (Factory Pattern).
-
-class Shape:
-    """Base class. Open for extension, closed for modification."""
+# =====================================================================
+# 2. Refactor to OCP (Open/Closed Principle) & 4. Shape Factory
+# =====================================================================
+class Shape(ABC):
+    @abstractmethod
     def area(self):
-        raise NotImplementedError("Subclasses must implement area() method")
-
+        pass
 
 class Circle(Shape):
     def __init__(self, radius):
         self.radius = radius
-
     def area(self):
-        return math.pi * (self.radius ** 2)
-
+        return 3.14159 * (self.radius ** 2)
 
 class Square(Shape):
     def __init__(self, side):
         self.side = side
-
     def area(self):
-        return self.side ** 2
-
+        return self.side * self.side
 
 class Triangle(Shape):
     def __init__(self, base, height):
         self.base = base
         self.height = height
-
     def area(self):
         return 0.5 * self.base * self.height
 
-
+# 4. Shape Factory
 class ShapeFactory:
-    """Factory to create shapes dynamically without exposing construction logic."""
     @staticmethod
     def create(kind, *args):
-        kind = kind.lower()
-        if kind == "circle":
+        if kind.lower() == "circle":
             return Circle(*args)
-        elif kind == "square":
+        elif kind.lower() == "square":
             return Square(*args)
-        elif kind == "triangle":
+        elif kind.lower() == "triangle":
             return Triangle(*args)
         else:
             raise ValueError(f"Unknown shape type: {kind}")
 
 
-# =========================================================
-# EXERCISE 3: Singleton Pattern
-# =========================================================
-# Holds configuration details where only ONE instance is ever created.
-
+# =====================================================================
+# 3. Write a Singleton (AppSettings)
+# =====================================================================
 class AppSettings:
     _instance = None
 
     def __new__(cls):
         if cls._instance is None:
+            # Create the one and only instance
             cls._instance = super().__new__(cls)
             cls._instance.currency = "ETB"
         return cls._instance
 
 
-# =========================================================
-# EXERCISE 5: Observer Pattern Pair
-# =========================================================
-# A Subject (NewsAgency) that notifies registered observers when news updates.
-
+# =====================================================================
+# 5. Write an Observer Pair
+# =====================================================================
 class NewsAgency:
     def __init__(self):
         self._subscribers = []
-        self._latest_news = None
 
     def subscribe(self, subscriber):
         self._subscribers.append(subscriber)
 
-    def notify(self):
+    def notify(self, news):
         for sub in self._subscribers:
-            sub.update(self._latest_news)
+            sub.update(news)
 
-    def publish_news(self, news):
-        self._latest_news = news
-        print(f"\n[Agency] Publishing news: '{news}'")
-        self.notify()
-
-
-class NewsSubscriber:
-    def __init__(self, name):
-        self.name = name
-
+class PhoneSubscriber:
     def update(self, news):
-        print(f"[{self.name}] Received update: {news}")
+        print(f"[Phone Notification] News alert: {news}")
+
+class EmailSubscriber:
+    def update(self, news):
+        print(f"[Email Notification] News alert: {news}")
 
 
-# =========================================================
-# TEST DRIVER (Verification)
-# =========================================================
-if __name__ == "__main__":
-    print("--- Testing Exercise 1 (SRP) ---")
-    rep = Report("Monthly Audit", "All finances are stable.")
-    saver = ReportSaver()
-    emailer = ReportEmailer()
-    saver.save_to_file(rep, "audit.txt")
-    emailer.email_report(rep, "manager@company.com")
+# =====================================================================
+# TESTING PRACTICE TASKS
+# =====================================================================
+print("--- 3. Singleton Test ---")
+config1 = AppSettings()
+config2 = AppSettings()
+print(f"Is config1 the same object as config2? {config1 is config2}")  # Must print True
 
-    print("\n--- Testing Exercise 2 & 4 (OCP & Factory) ---")
-    c = ShapeFactory.create("circle", 5)
-    s = ShapeFactory.create("square", 4)
-    t = ShapeFactory.create("triangle", 6, 3)
-    print(f"Circle Area: {c.area():.2f}")
-    print(f"Square Area: {s.area():.2f}")
-    print(f"Triangle Area: {t.area():.2f}")
+print("\n--- 4. Shape Factory Test ---")
+my_circle = ShapeFactory.create("circle", 5)
+print(f"Circle Area: {my_circle.area():.2f}")
 
-    print("\n--- Testing Exercise 3 (Singleton) ---")
-    config1 = AppSettings()
-    config2 = AppSettings()
-    print(f"Config 1 Currency: {config1.currency}")
-    print(f"Are both configurations the same instance? {config1 is config2}")
+print("\n--- 5. Observer Test ---")
+agency = NewsAgency()
+phone = PhoneSubscriber()
+email = EmailSubscriber()
 
-    print("\n--- Testing Exercise 5 (Observer) ---")
-    agency = NewsAgency()
-    user1 = NewsSubscriber("Abebe")
-    user2 = NewsSubscriber("Aster")
-    agency.subscribe(user1)
-    agency.subscribe(user2)
-    agency.publish_news("CodeOps Day 6 Assignments Completed!")
+agency.subscribe(phone)
+agency.subscribe(email)
+agency.notify("CodeOps Day 6 lessons are successfully completed!")
